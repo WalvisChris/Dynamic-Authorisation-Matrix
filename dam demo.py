@@ -52,7 +52,8 @@ def compute_column_widths(columns, font, starting_col_title, starting_col_values
     return widths
 
 # Load data from JSON file <<<<<<<<<<<<<<<<<<<<<< HIER DATA AANPASSEN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< HIER DATA AANPASSEN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-DATA_FILE = 'data_tbd.json'
+FILE_NAME = 'original'
+DATA_FILE = f'data_{FILE_NAME}.json'
 with open(DATA_FILE, 'r', encoding='utf-8') as json_file:
     data = json.load(json_file)
 
