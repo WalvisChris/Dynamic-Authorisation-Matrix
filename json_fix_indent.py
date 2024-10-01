@@ -1,6 +1,6 @@
 import json
 
-file_name = 'werkplaats'
+file_name = 'example' # set to example for github push
 file_path = f'data_{file_name}.JSON'
 
 with open(file_path, 'r', encoding='utf-8') as file:

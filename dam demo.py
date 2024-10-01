@@ -51,8 +51,7 @@ def compute_column_widths(columns, font, starting_col_title, starting_col_values
     
     return widths
 
-# Load data from JSON file <<<<<<<<<<<<<<<<<<<<<< HIER DATA AANPASSEN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< HIER DATA AANPASSEN <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-FILE_NAME = 'original'
+FILE_NAME = 'example' # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 DATA_FILE = f'data_{FILE_NAME}.json'
 with open(DATA_FILE, 'r', encoding='utf-8') as json_file:
     data = json.load(json_file)
@@ -79,9 +78,11 @@ TABLE_HEIGHT = CELL_HEIGHT * (ROWS + 1)
 screen_width, screen_height = 800, 600
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.RESIZABLE)
 pygame.display.set_caption('DEMO - Dynamic Authorisation Matrix - Doove Care Groep')
+clock = pygame.time.Clock()
+fps = 5
 
 scroll_x, scroll_y = 0, 0
-scroll_speed = 10 
+scroll_speed = 50 # adjustable
 
 def draw_table():
     global scroll_x, scroll_y
@@ -160,10 +161,15 @@ def update_screen():
     draw_button(btn1_rect, btn1_text)
     draw_button(btn2_rect, btn2_text)
     draw_button(btn3_rect, btn3_text)
+    draw_button(btn4_rect, btn4_text)
+    draw_button(btn5_rect, btn5_text)
     tmp_color = WHITE if theme else BLACK
-    text_surface = font.render(f'Frame: {frame}', True, tmp_color)
-    screen.blit(text_surface, (50, 990))
+    text_frame = font.render(f'Frame: {frame}', True, tmp_color)
+    text_fps = font.render(f'FPS: {fps}', True, tmp_color)
+    screen.blit(text_frame, (50, 980))
+    screen.blit(text_fps, (50, 990))
     pygame.display.flip()
+    clock.tick(fps)
 
 def add_function(title, values):
     new_function = {
@@ -220,7 +226,8 @@ def get_user_input(prompt, limit=20, all_caps=False, suggestions=False):
         
         # Draw suggestions
         for i, suggestion in enumerate(suggestion_list):
-            draw_text(screen, suggestion, (20, 250 + i * 30), WHITE)
+            index_of_suggestion = next((index for index, col in enumerate(data['Columns']) if col['Title'] == suggestion), -1)
+            draw_text(screen, f"{suggestion} (#{index_of_suggestion})", (20, 250 + i * 30), WHITE)
 
         pygame.display.flip()
 
@@ -233,18 +240,59 @@ def get_user_input(prompt, limit=20, all_caps=False, suggestions=False):
                     input_active = False
                 elif event.key == pygame.K_BACKSPACE:
                     user_input = user_input[:-1]
+                elif event.key == pygame.K_TAB and len(suggestion_list) > 0:
+                    user_input = suggestion_list[0]
                 else:
                     user_input += event.unicode
         if all_caps:
             user_input = user_input.upper()
     return user_input
 
+def get_column_index_by_title(target_title):
+    for index, column in enumerate(data['Columns']):
+        if column['Title'] == target_title:
+            return index
+    return -1
+
+def switch_columns(indexA, indexB):
+    if indexA != -1 or indexB != -1:
+        data['Columns'][indexA], data['Columns'][indexB] = data['Columns'][indexB], data['Columns'][indexA]
+        with open(DATA_FILE, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent='\t')
+            print("succes!")
+            recalc_columns()
+    else:
+        print("-1 in switch: Function not found. No actions taken.")
+
+def insert_column_after(column_index, insert_index):        
+    if column_index == -1 or insert_index == -1:
+        print("-1: no action taken.")
+    else:
+        insert_position = insert_index + 1
+
+        if 0 <= column_index < len(columns):
+            column_to_insert = columns[column_index]
+            
+            del columns[column_index]
+            
+            columns.insert(insert_position, column_to_insert)
+
+        with open(DATA_FILE, 'w', encoding='utf-8') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
+            print("succesfully inserted column!")
+            recalc_columns()
+
+# dont forget to add the buttons to update_screen()
 btn1_rect = pygame.Rect(150, 980, 100, 30)
 btn1_text = 'Add Function'
 btn2_rect = pygame.Rect(250, 980, 100, 30)
 btn2_text = 'Theme'
 btn3_rect = pygame.Rect(350, 980, 100, 30)
 btn3_text = 'Del Function'
+btn4_rect = pygame.Rect(450, 980, 100, 30)
+btn4_text = 'Switch'
+btn5_rect = pygame.Rect(550, 980, 100, 30)
+btn5_text = 'Insert After'
 
 # Main loop
 running = True
@@ -260,22 +308,38 @@ while running:
                 non_highlighted_count = sum(1 for item in data["StartingColumn"]["Values"] if not item["highlight"])
                 tmp_values = get_user_input("Enter the values for " + str(tmp_title) + ": ", non_highlighted_count, True)
                 add_function(tmp_title, tmp_values)
+
             elif btn2_rect.collidepoint(mouse_pos):
                 print("Switching Theme")
                 theme = not theme
+
             elif btn3_rect.collidepoint(mouse_pos):
                 title_to_remove = get_user_input("Enter the title of the function you want to delete: ", suggestions=True)
                 remove_function(title_to_remove)
 
+            elif btn4_rect.collidepoint(mouse_pos):
+                columnA = get_user_input("Enter the title of the first function you want to swap: ", suggestions=True)
+                columnB = get_user_input("Enter the title of the second function you want to swap: ", suggestions=True)
+                switch_columns(get_column_index_by_title(columnA), get_column_index_by_title(columnB))
+
+            elif btn5_rect.collidepoint(mouse_pos):
+                insert = get_user_input("Enter the title of the function you want to insert: ", suggestions=True)
+                after = get_user_input("Enter the title of the function you want to insert after: ", suggestions=True)
+                insert_column_after(get_column_index_by_title(insert), get_column_index_by_title(after))
+    
+    # Set fps higher when scrolling for smooth movement
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_UP]:
-        scroll_y += scroll_speed
-    if keys[pygame.K_DOWN]:
-        scroll_y -= scroll_speed
-    if keys[pygame.K_LEFT]:
-        scroll_x += scroll_speed
-    if keys[pygame.K_RIGHT]:
-        scroll_x -= scroll_speed
+    isScrolling = keys[pygame.K_UP] or keys[pygame.K_DOWN] or keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]
+    fps = 60 if isScrolling else 5
+    if isScrolling:
+        if keys[pygame.K_UP]:
+            scroll_y += scroll_speed
+        if keys[pygame.K_DOWN]:
+            scroll_y -= scroll_speed
+        if keys[pygame.K_LEFT]:
+            scroll_x += scroll_speed
+        if keys[pygame.K_RIGHT]:
+            scroll_x -= scroll_speed
         
     update_screen()
 
