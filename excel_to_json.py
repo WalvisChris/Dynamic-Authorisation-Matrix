@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load xlsx
-file_path = r'C:\Users\chris\Downloads\Stage Doove\Ontvangen Data\B-410a Informatieclassificatie & autorisatiematrix.xlsx'
+file_path = 'excel_example.xlsx'
 df = pd.read_excel(file_path, sheet_name='Classificatie')
 df.columns = df.columns.str.strip()
 
